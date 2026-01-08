@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/png" href="/static/images/Mulesoft_1.png" />
+  <title>ETO MuleSoft Audit Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+    }
+  </script>
+  <link rel="stylesheet" href="https://cdn.datatables.net/1.13.5/css/jquery.dataTables.min.css">
+  <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.dataTables.min.css">
+  <script src="https://code.jquery.com/jquery-3.7.1.js"></script>
+  <script src="https://cdn.datatables.net/1.13.5/js/jquery.dataTables.min.js"></script>
+  <script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
+  <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.1.3/jszip.min.js"></script>
+
+  <style>
+    /* Custom Dropdown Styles */
+    .custom-dropdown {
+      position: relative;
+      display: inline-block;
+      width: 100%; /* Ensure it takes full width */
+    }
+
+    .custom-dropdown-content {
+      display: none;
+      position: absolute;
+      background-color: #f9f9f9;
+      min-width: 100%; /* Take full width of parent */
+      box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+      z-index: 1;
+      border-radius: 0.25rem; /* rounded */
+      max-height: 200px; /* Limit height for scroll */
+      overflow-y: auto; /* Enable scrolling */
+      border: 1px solid #e2e8f0; /* Add a light border */
+    }
+
+    .dark .custom-dropdown-content {
+      background-color: #374151; /* Dark mode background */
+      border-color: #4b5563; /* Dark mode border */
+    }
+
+    .custom-dropdown-content a {
+      color: black;
+      padding: 8px 12px;
+      text-decoration: none;
+      display: block;
+    }
+
+    .dark .custom-dropdown-content a {
+      color: white; /* Dark mode text */
+    }
+
+    .custom-dropdown-content a:hover {
+      background-color: #f1f1f1;
+    }
+
+    .dark .custom-dropdown-content a:hover {
+      background-color: #4b5563; /* Dark mode hover */
+    }
+
+    .custom-dropdown-content input {
+      padding: 8px;
+      border: 1px solid #ccc;
+      border-radius: 0.25rem;
+      width: calc(100% - 16px); /* Full width minus padding */
+      margin: 8px;
+    }
+
+    .dark .custom-dropdown-content input {
+      background-color: #1f2937; /* Dark mode input background */
+      color: white;
+      border-color: #4b5563;
+    }
+
+    .show {
+      display: block;
+    }
+
+    /* Loader Styles */
+    #loading-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 1000; /* High z-index to be on top */
+      background-color: rgba(0, 0, 0, 0.5);
+      display: none; /* Initially hidden */
+      align-items: center;
+      justify-content: center;
+    }
+    .loader {
+      border: 16px solid #f3f3f3; /* Light grey */
+      border-top: 16px solid #3498db; /* Blue */
+      border-radius: 50%;
+      width: 120px;
+      height: 120px;
+      animation: spin 2s linear infinite;
+    }
+    @-webkit-keyframes spin { 0% { -webkit-transform: rotate(0deg); } 100% { -webkit-transform: rotate(360deg); } }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+    /* Active Filter Button Styles */
+    .active-total {
+        background-color: #dbeafe !important; /* Tailwind blue-100 */
+    }
+    .dark .active-total {
+        background-color: #1e40af !important; /* Tailwind blue-800 */
+    }
+    .active-success {
+        background-color: #dcfce7 !important; /* Tailwind green-100 */
+    }
+    .dark .active-success {
+        background-color: #166534 !important; /* Tailwind green-800 */
+    }
+    .active-fail {
+        background-color: #fee2e2 !important; /* Tailwind red-100 */
+    }
+    .dark .active-fail {
+        background-color: #991b1b !important; /* Tailwind red-800 */
+    }
+  </style>
+</head>
+
+<body class="bg-gray-100 dark:bg-gray-900 dark:text-white p-4">
+
+<div class="w-full flex justify-center mt-4 mb-6">
+  <h1 class="flex items-center space-x-2 text-[#0075A8] font-semibold text-2xl tracking-wide">
+    <img src="https://www.mulesoft.com/sites/default/files/mulesoft-logo.png" alt="MuleSoft Logo" class="h-8">
+    <span>Audit Dashboard</span>
+  </h1>
+</div>
+
+<div class="flex justify-end items-center mb-4">
+  <div id="live-est-time" class="font-mono text-sm bg-gray-200 dark:bg-gray-800 px-3 py-1 rounded"></div>
+</div>
+
+<div class="grid grid-cols-3 gap-4 mb-4 text-sm">
+  <button id="totalBtn" onclick="filterByState('')" class="w-full text-left">
+    <div class="bg-white dark:bg-gray-700 p-4 rounded shadow h-full hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors">
+      <div class="font-bold">Total Records</div>
+      <div id="totalCount" class="text-xl mt-1">0</div>
+    </div>
+  </button>
+  <button id="successBtn" onclick="filterByState('success')" class="w-full text-left">
+    <div class="bg-white dark:bg-gray-700 p-4 rounded shadow h-full hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors">
+      <div class="font-bold text-green-600">Success Count</div>
+      <div id="successCount" class="text-xl mt-1">0</div>
+    </div>
+  </button>
+  <button id="failBtn" onclick="filterByState('fail')" class="w-full text-left">
+    <div class="bg-white dark:bg-gray-700 p-4 rounded shadow h-full hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors">
+      <div class="font-bold text-red-600">Failed Count</div>
+      <div id="failCount" class="text-xl mt-1">0</div>
+    </div>
+  </button>
+</div>
+
+<div class="flex">
+  <div class="w-1/5 bg-white dark:bg-gray-800 p-4 shadow rounded space-y-4 text-sm">
+    <div>
+      <label>Correlation ID</label>
+      <input type="text" id="correlationid" class="w-full border p-1 rounded dark:text-black">
+    </div>
+    <div>
+      <label>Search Type</label>
+      <select id="search_type" class="w-full border p-1 rounded dark:text-black" onchange="toggleSearchInput()">
+        <option value="">-- Select Type --</option>
+        <option value="sensor">Sensor</option>
+        <option value="payload">Payload</option>
+        <option value="variable">Variable</option>
+        <option value="header">Header</option>
+      </select>
+      <input type="text" id="search_value" class="w-full border p-1 mt-1 rounded dark:text-black hidden" placeholder="Enter search value">
+    </div>
+    <div>
+      <label>API Name</label>
+      <div class="custom-dropdown">
+        <input type="text" id="api_name_display" class="w-full border p-1 rounded dark:text-black" placeholder="Select API Name" readonly onclick="toggleApiDropdown()">
+        <div id="apiNameDropdown" class="custom-dropdown-content">
+          <input type="text" placeholder="Search API Name..." id="api_name_search" onkeyup="filterApiList()">
+          </div>
+      </div>
+      <input type="hidden" id="api_name" value=""> </div>
+    <div>
+      <label>Timestamp Filter</label>
+      <select id="timestamp_filter" class="w-full border p-1 rounded dark:text-black" onchange="toggleCustomTimeInputs()">
+        <option value="">-- Select --</option>
+        <option value="30min">Last 30 Minutes</option>
+        <option value="1hr">Last 1 Hour</option>
+        <option value="6hr">Last 6 Hours</option>
+        <option value="custom">Custom Range</option>
+      </select>
+      <div id="custom_time_range" class="hidden mt-2 space-y-2">
+        <div>
+          <label for="custom_start_time" class="text-xs">From:</label>
+          <input type="datetime-local" id="custom_start_time" class="w-full border p-1 rounded dark:text-black">
+        </div>
+        <div>
+          <label for="custom_end_time" class="text-xs">To:</label>
+          <input type="datetime-local" id="custom_end_time" class="w-full border p-1 rounded dark:text-black">
+        </div>
+      </div>
+    </div>
+    <div>
+      <label>State</label>
+      <select id="state" class="w-full border p-1 rounded dark:text-black">
+        <option value="">-- All --</option>
+        {% for s in states %}
+          <option value="{{ s }}">{{ s }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <button onclick="fetchData()" class="bg-blue-600 text-white px-3 py-1 rounded w-full">Search</button>
+  </div>
+
+  <div class="w-4/5 ml-4 bg-white dark:bg-gray-800 p-4 shadow rounded text-sm">
+    <table id="resultTable" class="display nowrap w-full text-sm">
+      <thead>
+        <tr>
+          <th>Correlation ID</th>
+          <th>API Name</th>
+          <th>Timestamp</th>
+          <th>State</th>
+          <th>Total Time Taken</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</div>
+
+<datalist id="api_list" style="display: none;">
+  {% for name in api_names %}
+    <option value="{{ name }}">
+  {% endfor %}
+</datalist>
+
+<div id="loading-overlay">
+  <div class="loader"></div>
+</div>
+
+<script>
+let table;
+let allApiNames = []; // Store all API names globally
+
+// Function to populate the custom API dropdown
+function populateApiDropdown(apiNames) {
+  const dropdownContent = document.getElementById('apiNameDropdown');
+  // Clear existing options except the search input
+  const existingSearchInput = dropdownContent.querySelector('input');
+  dropdownContent.innerHTML = ''; // Clear all content
+  if (existingSearchInput) {
+    dropdownContent.appendChild(existingSearchInput); // Re-add the search input
+  }
+
+  apiNames.forEach(name => {
+    const a = document.createElement('a');
+    a.href = "javascript:void(0)"; // Prevent default link behavior
+    a.textContent = name;
+    a.onclick = function() {
+      document.getElementById('api_name_display').value = name;
+      document.getElementById('api_name').value = name; // Set hidden input value
+      toggleApiDropdown(); // Close dropdown after selection
+      fetchData(); // Trigger search on selection
+    };
+    dropdownContent.appendChild(a);
+  });
+}
+
+function filterApiList() {
+  const input = document.getElementById("api_name_search");
+  const filter = input.value.toUpperCase();
+  const div = document.getElementById("apiNameDropdown");
+  // Get all <a> elements (which represent API names)
+  const a = div.getElementsByTagName("a");
+  for (let i = 0; i < a.length; i++) {
+    txtValue = a[i].textContent || a[i].innerText;
+    if (txtValue.toUpperCase().indexOf(filter) > -1) {
+      a[i].style.display = "";
+    } else {
+      a[i].style.display = "none";
+    }
+  }
+}
+
+function toggleApiDropdown() {
+  document.getElementById("apiNameDropdown").classList.toggle("show");
+  // When showing the dropdown, ensure the search input is focused
+  if (document.getElementById("apiNameDropdown").classList.contains("show")) {
+    document.getElementById("api_name_search").focus();
+  }
+}
+
+// Close the dropdown if the user clicks outside of it
+window.onclick = function(event) {
+  // Check if the click is outside the custom dropdown elements
+  if (!event.target.closest('.custom-dropdown') && !event.target.matches('#api_name_display')) {
+    const dropdowns = document.getElementsByClassName("custom-dropdown-content");
+    for (let i = 0; i < dropdowns.length; i++) {
+      const openDropdown = dropdowns[i];
+      if (openDropdown.classList.contains('show')) {
+        openDropdown.classList.remove('show');
+      }
+    }
+  }
+}
+
+// Check saved preference when page loads
+document.addEventListener('DOMContentLoaded', () => {
+  
+// Getting the API name list
+  const apiListElement = document.getElementById('api_list');
+  if (apiListElement) {
+    Array.from(apiListElement.options).forEach(option => {
+      allApiNames.push(option.value);
+    });
+  }
+  populateApiDropdown(allApiNames);
+
+  function updateLiveESTTime() {
+    // Get the date in Eastern Time
+    const estDate = new Date().toLocaleString("en-US", {
+        timeZone: "America/New_York"
+    });
+    
+    // Create a Date object from the string to work with
+    const date = new Date(estDate);
+    
+    // Format the time in 24-hour format
+    const formattedTime = date.toLocaleString("en-US", {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false,
+        hourCycle: 'h23'
+    });
+    
+    // Get the correct timezone abbreviation (EST or EDT)
+    const timeZoneAbbr = date.toLocaleString("en-US", {
+        timeZone: "America/New_York",
+        timeZoneName: 'short'
+    }).split(' ').pop();
+    
+    const timeElement = document.getElementById('live-est-time');
+    if (timeElement) {
+        // Display the actual time with the correct timezone abbreviation
+        timeElement.textContent = `Current Eastern Time: ${formattedTime} ${timeZoneAbbr}`;
+    }
+}
+  updateLiveESTTime();
+  setInterval(updateLiveESTTime, 1000);
+
+});
+
+function initializeTable() {
+  if (!table) {
+    table = $('#resultTable').DataTable({
+      destroy: true,
+      pageLength: 20,
+      lengthMenu: [20, 40, 80, 100],
+      dom: 'Bfrtip',
+      buttons: ['excelHtml5', 'csvHtml5'],
+      order: [[2, 'desc']] // Default sort by Timestamp descending
+    });
+  }
+}
+
+function toggleSearchInput() {
+  const searchType = document.getElementById('search_type').value;
+  const searchValue = document.getElementById('search_value');
+
+  if (searchType) {
+    searchValue.classList.remove('hidden');
+    searchValue.placeholder = `Enter ${searchType} value...`;
+  } else {
+    searchValue.classList.add('hidden');
+  }
+}
+
+function toggleCustomTimeInputs() {
+  const filter = document.getElementById('timestamp_filter').value;
+  const customRangeDiv = document.getElementById('custom_time_range');
+  if (filter === 'custom') {
+    customRangeDiv.classList.remove('hidden');
+  } else {
+    customRangeDiv.classList.add('hidden');
+  }
+}
+
+function showLoader() {
+  // Use flex display to center the loader
+  document.getElementById('loading-overlay').style.display = 'flex';
+}
+
+function hideLoader() {
+  document.getElementById('loading-overlay').style.display = 'none';
+}
+
+function filterByState(state) {
+  // Remove active classes from all buttons' inner divs
+  document.querySelector('#totalBtn > div').classList.remove('active-total');
+  document.querySelector('#successBtn > div').classList.remove('active-success');
+  document.querySelector('#failBtn > div').classList.remove('active-fail');
+
+  // Add active class to the clicked button's inner div
+  if (state === 'success') {
+    document.querySelector('#successBtn > div').classList.add('active-success');
+  } else if (state === 'fail') {
+    document.querySelector('#failBtn > div').classList.add('active-fail');
+  } else { // for state === '' (Total Records)
+    document.querySelector('#totalBtn > div').classList.add('active-total');
+  }
+
+  if (!table) return;
+
+  let searchString = '';
+  let useRegex = false;
+
+  if (state === 'success') {
+    searchString = '^success$';
+    useRegex = true;
+  } else if (state === 'fail') {
+    const allStates = Array.from(document.querySelectorAll('#state option'))
+                           .map(opt => opt.value)
+                           .filter(val => val && val.toLowerCase() !== 'success');
+    if (allStates.length > 0) {
+      // Build a regex to match any of the non-success states, escaping special characters.
+      searchString = allStates.map(s => `^${s.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')}$`).join('|');
+      useRegex = true;
+    }
+  }
+  
+  // The 'State' column is the 4th column (index 3), perform a case-insensitive search.
+  table.column(3).search(searchString, useRegex, false, true).draw();
+}
+
+function fetchData() {
+  let searchData = {
+    correlationid: $('#correlationid').val(),
+    api_name: $('#api_name').val(), // Use the value from the hidden input
+    timestamp_filter: $('#timestamp_filter').val(),
+    state: $('#state').val(),
+    search_type: $('#search_type').val(),
+    search_value: $('#search_value').val()
+  };
+
+  if (searchData.timestamp_filter === 'custom') {
+    const startTimeLocal = $('#custom_start_time').val();
+    if (startTimeLocal) {
+      searchData.custom_start_time = new Date(startTimeLocal).toISOString();
+    }
+    const endTimeLocal = $('#custom_end_time').val();
+    if (endTimeLocal) {
+      searchData.custom_end_time = new Date(endTimeLocal).toISOString();
+    }
+  }
+
+  showLoader();
+  $.ajax({
+    url: "/search",
+    method: "POST",
+    contentType: "application/json",
+    data: JSON.stringify(searchData),
+    error: function(jqXHR, textStatus, errorThrown) {
+      console.error("AJAX Error:", textStatus, errorThrown);
+      alert("An error occurred while fetching data. Please try again.");
+    },
+    complete: function() {
+      hideLoader();
+    },
+    success: function(data) {
+      if (!table) {
+        initializeTable();
+      } else {
+        table.clear();
+      }
+      let success = 0, fail = 0;
+      data.forEach(row => {
+        if (row.state.toLowerCase() === 'success') success++;
+        else fail++;
+        table.row.add([
+          `<a href="/workflow?correlationid=${row.correlationid}" class='text-blue-600 underline'>${row.correlationid}</a>`,
+          row.api_name,
+          // Format the timestamp to 24-hour EST/EDT
+          // new Date(row.time_stamp).toLocaleString('en-US', {
+          //   timeZone: 'America/New_York',
+          //   year: 'numeric',
+          //   month: '2-digit',
+          //   day: '2-digit',
+          //   hour: '2-digit',
+          //   minute: '2-digit',
+          //   second: '2-digit',
+          //   hour12: false, // Use 24-hour format
+          //   hourCycle: 'h23' // Explicitly set 24-hour cycle
+          // }) + ' ET',
+          row.time_stamp,
+          row.state,
+          row.total_time_taken
+        ]);
+      });
+      table.draw();
+
+      // Analytics Update
+      $('#totalCount').text(data.length);
+      $('#successCount').text(success);
+      $('#failCount').text(fail);
+    }
+  });
+}
+
+$(document).ready(function () {
+  initializeTable();
+  // Add event listeners for real-time search on relevant inputs
+  $('#correlationid, #search_value').on('change keyup', function() {
+    fetchData();
+  });
+});
+</script>
+
+</body>
+</html>

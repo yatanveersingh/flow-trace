@@ -1,0 +1,28 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Login</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-white h-screen flex items-center justify-center">
+  <div class="bg-white dark:bg-gray-800 p-6 rounded shadow-md w-96 space-y-4 text-sm">
+    <h2 class="text-xl font-bold text-center">🔐 Admin Login</h2>
+    {% if error %}
+      <div class="text-red-500 text-center">{{ error }}</div>
+    {% endif %}
+    <form method="post">
+      <div>
+        <label>Username</label>
+        <input name="username" type="text" class="w-full border p-1 rounded dark:text-black" required>
+      </div>
+      <div>
+        <label>Password</label>
+        <input name="password" type="password" class="w-full border p-1 rounded dark:text-black" required>
+      </div>
+      <button type="submit" class="bg-blue-600 text-white px-3 py-1 rounded w-full mt-2">Login</button>
+    </form>
+  </div>
+</body>
+</html>

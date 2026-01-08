@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/png" href="/static/images/Mulesoft_1.png" />
+    <title>ETO MuleSoft Audit Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet">
+    <style>
+        .workflow-container {
+            display: flex;
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            gap: 1rem;
+            align-items: center;
+            padding: 1rem;
+        }
+        .block {
+    width: 85px; /* Fixed width */
+    height: 85px; /* Fixed height */
+    min-width: 85px; /* Prevent shrinking */
+    min-height: 85px; /* Prevent shrinking */
+    flex: 0 0 85px; /* Don't grow or shrink, maintain 85px basis */
+    background-color: #e2e8f0;
+    border: 2px solid #333;
+    border-radius: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-weight: normal;
+    font-size: 0.65rem;
+    text-align: center;
+    position: relative;
+    transition: transform 0.2s;
+    cursor: pointer;
+    padding: 0.25rem;
+    overflow: hidden; /* Hide overflow content */
+    word-break: break-word; /* Break words to fit */
+}
+
+.block-content {
+    width: 100%;
+    max-height: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    display: box;
+    -webkit-line-clamp: 3; /* Vendor prefixed version */
+    line-clamp: 3; /* Standard property */
+    -webkit-box-orient: vertical;
+    box-orient: vertical;
+}
+        .block img {
+            height: 20px;
+            width: 20px;
+            margin-bottom: 0.25rem;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .block:hover {
+            transform: scale(1.05);
+            background-color: #cbd5e1;
+        }
+        .block-fail {
+            background-color: #fecaca !important;
+        }
+        .arrow-svg {
+            width: 40px;
+            height: 20px;
+            flex-shrink: 0;
+        }
+        .dark .arrow-svg line, .dark .arrow-svg polygon {
+            stroke: white;
+            fill: white;
+        }
+        .group-title {
+            font-weight: 600;
+            font-size: 0.9rem;
+            margin-top: 1.5rem;
+        }
+        .flow-title {
+            font-weight: 500;
+            font-size: 0.8rem;
+            margin-top: 0.75rem;
+            margin-left: 1rem;
+        }
+        .dark .flow-title {
+            color: #d1d5db;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 p-6 dark:bg-gray-900 dark:text-white">
+
+    <h1 class="flex items-center mb-6 space-x-2 text-[#0075A8] font-semibold text-xl">
+        <img src="https://www.mulesoft.com/sites/default/files/mulesoft-logo.png" alt="MuleSoft Logo" class="h-6">
+        <span class="tracking-wide">Flow Trace for Correlation ID: <span id="cidLabel" class="font-mono text-gray-700 dark:text-gray-300"></span></span>
+    </h1>
+
+    <div id="diagramArea" class="space-y-8"></div>
+
+    <div id="modal" class="fixed inset-0 z-50 bg-black bg-opacity-50 hidden" onclick="if (event.target === this) this.classList.add('hidden')">
+        <div class="flex items-center justify-center min-h-screen">
+            <div class="relative bg-white dark:bg-gray-800 rounded shadow-lg w-2/3">
+                <button onclick="document.getElementById('modal').classList.add('hidden')" class="absolute top-4 right-4 z-10 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-white text-3xl leading-none font-semibold">&times;</button>
+                
+                <div class="max-h-[90vh] overflow-y-auto p-6">
+                    <div class="text-center mb-4">
+                        <span class="font-semibold text-lg">Timestamp: </span>
+                        <span id="modalTimestamp" class="font-mono text-gray-700 dark:text-gray-300 text-lg"></span>
+                    </div>
+                    <div class="flex justify-between items-center mb-2">
+                        <h2 class="text-lg font-bold pr-8">📦 Payload</h2>
+                        <button onclick="copyContent('payloadBox', 'copyPayloadBtn')" id="copyPayloadBtn" class="bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded transition-colors flex items-center justify-center"><span class="material-icons-outlined text-lg">content_copy</span></button>
+                    </div>
+                    <pre id="payloadBox" class="bg-gray-100 dark:bg-gray-700 dark:text-gray-300 text-sm p-2 rounded max-h-48 overflow-y-auto whitespace-pre-wrap break-all"></pre>
+                    
+                    <div class="flex justify-between items-center mb-2 mt-4">
+                        <h2 class="text-lg font-bold pr-8">📨 Header</h2>
+                        <button onclick="copyContent('headerBox', 'copyHeaderBtn')" id="copyHeaderBtn" class="bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded transition-colors flex items-center justify-center"><span class="material-icons-outlined text-lg">content_copy</span></button>
+                    </div>
+                    <pre id="headerBox" class="bg-gray-100 dark:bg-gray-700 dark:text-gray-300 text-sm p-2 rounded max-h-48 overflow-y-auto whitespace-pre-wrap break-all"></pre>
+                    
+                    <div class="flex justify-between items-center mb-2 mt-4">
+                        <h2 class="text-lg font-bold pr-8">🔧 Variable</h2>
+                        <button onclick="copyContent('variableBox', 'copyVariableBtn')" id="copyVariableBtn" class="bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded transition-colors flex items-center justify-center"><span class="material-icons-outlined text-lg">content_copy</span></button>
+                    </div>
+                    <pre id="variableBox" class="bg-gray-100 dark:bg-gray-700 dark:text-gray-300 text-sm p-2 rounded max-h-48 overflow-y-auto whitespace-pre-wrap break-all"></pre>
+                    
+                    <h2 class="text-lg font-bold mb-2 mt-4">🚩 Sensor</h2>
+                    <pre id="sensorBox" class="bg-gray-100 dark:bg-gray-700 dark:text-gray-300 text-sm p-2 rounded max-h-48 overflow-y-auto whitespace-pre-wrap break-all"></pre>
+                    
+                    <h2 class="text-lg font-bold mb-2 mt-4">🛑 Error Code</h2>
+                    <pre id="errorCodeBox" class="bg-gray-100 dark:bg-gray-700 dark:text-gray-300 text-sm p-2 rounded max-h-48 overflow-y-auto whitespace-pre-wrap break-all"></pre>
+                    
+                    <h2 class="text-lg font-bold mb-2 mt-4">❌ Error Description</h2>
+                    <pre id="errorDescriptionBox" class="bg-gray-100 dark:bg-gray-700 dark:text-gray-300 text-sm p-2 rounded max-h-48 overflow-y-auto whitespace-pre-wrap break-all"></pre>
+                    
+                    <button onclick="document.getElementById('modal').classList.add('hidden')" class="mt-3 bg-blue-600 text-white px-3 py-1 rounded">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const cid = new URLSearchParams(window.location.search).get("correlationid");
+        document.getElementById("cidLabel").textContent = cid;
+        const diagramArea = document.getElementById("diagramArea");
+
+        function copyContent(sourceId, buttonId, defaultIcon = '<span class="material-icons-outlined text-lg">content_copy</span>', copiedIcon = '✅') {
+            const sourceBox = document.getElementById(sourceId);
+            const copyBtn = document.getElementById(buttonId);
+            const contentText = sourceBox.textContent;
+
+            const showSuccess = () => {
+                copyBtn.innerHTML = copiedIcon;
+                copyBtn.classList.replace('bg-blue-500', 'bg-green-500');
+                copyBtn.classList.replace('hover:bg-blue-600', 'hover:bg-green-600');
+                setTimeout(() => {
+                    copyBtn.innerHTML = defaultIcon;
+                    copyBtn.classList.replace('bg-green-500', 'bg-blue-500');
+                    copyBtn.classList.replace('hover:bg-green-600', 'hover:bg-blue-600');
+                }, 2000);
+            };
+
+            const showError = (err) => {
+                console.error(`Failed to copy : `, err);
+                alert(`Failed to copy ${sourceId.replace('Box', '')} to clipboard.`);
+            };
+
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(contentText).then(showSuccess, showError);
+            } else {
+                // Fallback for insecure contexts or older browsers
+                const textArea = document.createElement("textarea");
+                textArea.value = contentText;
+                textArea.style.position = "fixed";
+                textArea.style.top = "-9999px";
+                textArea.style.left = "-9999px";
+                document.body.appendChild(textArea);
+                textArea.focus();
+                textArea.select();
+                try {
+                    document.execCommand('copy');
+                    showSuccess();
+                } catch (err) {
+                    showError(err);
+                }
+                document.body.removeChild(textArea);
+            }
+        }
+
+        function showModal(data) {
+            const modalTimestampEl = document.getElementById('modalTimestamp');
+if (data.time_stamp) {
+    const estTimestamp = new Date(data.time_stamp).toLocaleString('en-US', {
+        timeZone: 'America/New_York',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+    });
+    modalTimestampEl.textContent = `${estTimestamp}`;
+} else {
+    modalTimestampEl.textContent = 'N/A';
+}
+            const fields = { payload: "payloadBox", header: "headerBox", variable: "variableBox", sensor: "sensorBox", error_code: "errorCodeBox", error_description: "errorDescriptionBox" };
+            const copyableFields = ["payload", "header", "variable"];
+            for (const [key, elementId] of Object.entries(fields)) {
+                const element = document.getElementById(elementId);
+                let content = data[key];
+
+                // Attempt to format if content is a JSON string or an object
+                if (content) {
+                    if (typeof content === 'object') {
+                        content = JSON.stringify(content, null, 2);
+                    } else if (typeof content === 'string') {
+                        try {
+                            // Check if it's a stringified JSON and format it
+                            const parsedJson = JSON.parse(content);
+                            content = JSON.stringify(parsedJson, null, 2);
+                        } catch (e) {
+                            // Not a JSON string, leave as is.
+                        }
+                    }
+                }
+
+                element.textContent = content || `No ${key.replace(/_/g, ' ')}`;
+
+                if (copyableFields.includes(key)) {
+                    const btnId = `copy${key.charAt(0).toUpperCase() + key.slice(1)}Btn`;
+                    const btn = document.getElementById(btnId);
+                    if (!content) {
+                        btn.disabled = true;
+                        btn.classList.add('opacity-50', 'cursor-not-allowed');
+                        btn.classList.remove('hover:bg-blue-600');
+                    } else {
+                        btn.disabled = false;
+                        btn.classList.remove('opacity-50', 'cursor-not-allowed');
+                        btn.classList.add('hover:bg-blue-600');
+                    }
+                }
+            }
+            document.getElementById('modal').classList.remove('hidden');
+        }
+
+        function renderApiSection(apiName, flowsInApi) {
+            const apiSection = document.createElement("div");
+            const apiLabel = document.createElement("div");
+            apiLabel.className = "group-title";
+            apiLabel.textContent = `API: ${apiName}`; // Display the actual API name
+            apiSection.appendChild(apiLabel);
+
+            for (const configFile in flowsInApi) {
+                const flowLabel = document.createElement("div");
+                flowLabel.className = "flow-title";
+                flowLabel.textContent = `Flow: ${configFile}`; // Display the actual config file name
+                apiSection.appendChild(flowLabel);
+
+                const container = document.createElement("div");
+                container.className = "workflow-container";
+
+                // Sort by time_stamp and sequence
+                flowsInApi[configFile].sort((a, b) => {
+                    const dateA = new Date(a.time_stamp);
+                    const dateB = new Date(b.time_stamp);
+                    if (dateA < dateB) return -1;
+                    if (dateA > dateB) return 1;
+                    return a.sequence - b.sequence;
+                }).forEach((row, index, arr) => {
+                    const block = document.createElement("div");
+                    const isFailure = !row.state || row.state.toLowerCase() !== "success";
+                    block.className = `block ${isFailure ? "block-fail" : ""}`;
+
+                    block.innerHTML = `
+    <img src="/static/images/${row.connector_type}.jpg" alt="${row.display_name}">
+    <div class="block-content">${row.display_name || row.connector_type || "Unknown"}</div>
+`;
+                    block.onclick = () => showModal(row);
+                    container.appendChild(block);
+
+                    if (index < arr.length - 1) {
+                        const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+                        svg.setAttribute("viewBox", "0 0 40 10");
+                        svg.setAttribute("class", "arrow-svg");
+                        svg.innerHTML = `
+                            <line x1="0" y1="5" x2="35" y2="5" stroke="black" stroke-width="2"/>
+                            <polygon points="35,0 40,5 35,10" fill="black"/>
+                        `;
+                        container.appendChild(svg);
+                    }
+                });
+                apiSection.appendChild(container);
+            }
+            diagramArea.appendChild(apiSection);
+        }
+
+        async function fetchAndRenderWorkflow() {
+            try {
+                // Ensure the correlation ID is part of the fetch URL
+                const response = await fetch(`/details/${cid}`);
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                const data = await response.json();
+
+                if (!data || data.length === 0) {
+                    diagramArea.textContent = "No trace details found for this Correlation ID.";
+                    return;
+                }
+
+                // Group first by API name, then by config file name
+                const groupedByApi = data.reduce((acc, row) => {
+                    const api = row.api_name || "default_api";
+                    const configFile = row.config_file || "main_flow";
+                    if (!acc[api]) acc[api] = {};
+                    if (!acc[api][configFile]) acc[api][configFile] = [];
+                    acc[api][configFile].push(row);
+                    return acc;
+                }, {});
+
+                for (const api in groupedByApi) {
+                    renderApiSection(api, groupedByApi[api]);
+                }
+            } catch (error) {
+                console.error("Failed to fetch workflow details:", error);
+                diagramArea.innerHTML = `<div class="text-red-500 p-4">Error loading workflow data. Please check the console for details.</div>`;
+            }
+        }
+
+        // Initial call to start the process
+        fetchAndRenderWorkflow();
+    </script>
+</body>
+</html>
