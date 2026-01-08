@@ -78,22 +78,28 @@ Each trace event is expected to be **JSON‑structured** and minimally contain:
 
 ```json
 {
-  "trace_id": "uuid",
-  "flow_name": "order-processing",
-  "component": "http:listener",
-  "event_type": "START | END | ERROR",
-  "timestamp": "ISO‑8601",
-  "metadata": {
-    "attempt": 1,
-    "payload_size": 1024
-  }
+	"correlationid": "e5b82c30-xxx-11f0-b827-xxx",
+	"api_name": "e-xxx-xxx-api-v1",
+	"sequence": 2,
+	"config_file": "implementation.xml",
+	"flow": "implementation-sub_flow",
+	"payload": "<n0:ExternalSalesDocumentDataQueryFromServiceRequest_sync xmlns:n0=\"http://sap.com/xi/SAPGlobal20/Global\"></n0:ExternalSalesDocumentDataQueryFromServiceRequest_sync>",
+	"header": "{\n  \"x-request-id\": \"xxx\",\"content-type\": \"application/xml\"\n}",
+	"connector_type": "http_request",
+	"usage": "",
+	"time_stamp": "2025-12-04T09:52:08.671Z",
+	"state": "success",
+	"variable": "{}",
+	"display_name": "DataToCPQ",
+	"error_code": "",
+	"error_description": "",
+	"sensor": "masterdata: creditcheck"
 }
 ```
 
 This allows Flow Trace to:
 - Correlate steps
 - Reconstruct execution order
-- Detect retries and failures
 
 ---
 
@@ -216,4 +222,3 @@ MIT License – free to use, modify, and distribute.
 Flow Trace was built to **demystify complex integration flows** and give teams **clarity, confidence, and control** over their distributed systems.
 
 If this project helped you, consider ⭐ starring the repository and sharing feedback.
-
